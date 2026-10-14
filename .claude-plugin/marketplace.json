@@ -1,0 +1,15 @@
+{
+  "name": "renta-igaming",
+  "description": "Claude plugins for iGaming analytics through Renta.",
+  "owner": {
+    "name": "AI integration team"
+  },
+  "plugins": [
+    {
+      "name": "renta-igaming-analytics",
+      "source": ".",
+      "description": "Renta Context Layer skills: querying rules, metric dictionary, payments, marketing, player revenue, risk, charts/dashboards, model builder. Instructions only.",
+      "version": "0.3.0"
+    }
+  ]
+}
