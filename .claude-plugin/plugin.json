@@ -1,7 +1,7 @@
 {
   "name": "renta-igaming-analytics",
-  "version": "0.4.0",
-  "description": "Claude skills for iGaming analytics through the Renta MCP Context Layer: querying rules, metric dictionary, payments, marketing/affiliate, player revenue, risk, charts and dashboards, and model builder. Instructions only, no company data.",
+  "version": "0.5.0",
+  "description": "Claude commands and scripts for iGaming analytics through the Renta MCP Context Layer: daily briefing with anomalies, change decomposition, dashboards, golden-number regression checks, a model-builder skill, and a cloud-routine prompt. Instructions and code only, no company data.",
   "author": {
     "name": "AI integration team"
   }

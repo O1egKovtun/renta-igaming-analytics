@@ -4,11 +4,12 @@
 Usage: anomalies.py input.json [--z 3] [--rel-pct 15] [--max-lag 2] [--format text|json]
 input: {"metrics": [{"name", "unit", "dates": ["YYYY-MM-DD", ...], "values": [...]}],
         "freshness": [{"model": "...", "max_date": "YYYY-MM-DD"}], "as_of": "YYYY-MM-DD"}
-The latest date of each metric must be a full day. Flags need BOTH |z| >= --z and a relative gap >= --rel-pct percent.
+The latest date of each metric must be a full day. Flags need BOTH |z| >= --z and a relative gap >= --rel-pct percent; the one exception is a non-zero value over an all-zero baseline (flag with baseline_zero true).
 Self-check: anomalies.py selftest
 """
 import argparse
 import json
+import math
 import statistics
 import sys
 from datetime import date, timedelta
@@ -19,8 +20,11 @@ MIN_SAME_WEEKDAY_POINTS = 3
 SCALE_FLOOR_SHARE = 1 / 20  # keeps a tiny spread from turning a normal wobble into a huge z
 
 
-def analyse(metric, z_min, rel_min_pct):
-    points = {d: v for d, v in zip(metric["dates"], metric["values"]) if v is not None}
+def analyse(metric, z_min, rel_min_pct, as_of=None):
+    if len(metric["dates"]) != len(metric["values"]):
+        raise ValueError(f"{metric['name']}: {len(metric['dates'])} dates vs {len(metric['values'])} values")
+    points = {d: v for d, v in zip(metric["dates"], metric["values"])
+              if v is not None and math.isfinite(v) and (as_of is None or d <= as_of)}
     if not points:
         return {"name": metric["name"], "status": "no_data"}
     last = max(points)
@@ -37,17 +41,23 @@ def analyse(metric, z_min, rel_min_pct):
     rel = (points[last] - median) / median if median else None
     z = (points[last] - median) / scale if scale else None
     flag = None
-    if z is not None and rel is not None and abs(z) >= z_min and abs(rel) * 100 >= rel_min_pct:
+    baseline_zero = median == 0 and mad == 0 and points[last] != 0
+    if baseline_zero:
+        flag = "high" if points[last] > 0 else "low"
+    elif z is not None and rel is not None and abs(z) >= z_min and abs(rel) * 100 >= rel_min_pct:
         flag = "high" if z > 0 else "low"
     return {**row, "status": "ok", "baseline_median": median, "history_points": len(history),
             "vs_baseline_pct": None if rel is None else round(rel * 100, 1),
             "vs_last_week_pct": None if not last_week else round((points[last] - last_week) / last_week * 100, 1),
-            "z": None if z is None else round(z, 1), "flag": flag}
+            "z": None if z is None else round(z, 1), "flag": flag, "baseline_zero": baseline_zero}
 
 
 def stale(freshness, as_of, max_lag):
     out = []
     for item in freshness:
+        if item.get("max_date") is None:  # a model with no date at all counts as stale
+            out.append({"model": item["model"], "max_date": None, "lag_days": None})
+            continue
         lag = (date.fromisoformat(as_of) - date.fromisoformat(item["max_date"])).days
         if lag > max_lag:
             out.append({"model": item["model"], "max_date": item["max_date"], "lag_days": lag})
@@ -55,7 +65,7 @@ def stale(freshness, as_of, max_lag):
 
 
 def run(payload, z_min=3.0, rel_min_pct=15, max_lag=2):
-    results = [analyse(m, z_min, rel_min_pct) for m in payload["metrics"]]
+    results = [analyse(m, z_min, rel_min_pct, payload.get("as_of")) for m in payload["metrics"]]
     as_of = payload.get("as_of") or max((r["date"] for r in results if "date" in r), default=None)
     return {"as_of": as_of, "metrics": results,
             "flags": [r for r in results if r.get("flag")],
@@ -100,5 +110,9 @@ if __name__ == "__main__":
     parser.add_argument("--max-lag", type=int, default=2)
     parser.add_argument("--format", choices=["text", "json"], default="text")
     args = parser.parse_args()
-    result = run(json.loads(Path(args.input).read_text(encoding="utf-8")), args.z, args.rel_pct, args.max_lag)
+    try:
+        result = run(json.loads(Path(args.input).read_text(encoding="utf-8")), args.z, args.rel_pct, args.max_lag)
+    except (ValueError, KeyError, TypeError, OSError) as error:
+        print(f"error: {error!r}", file=sys.stderr)
+        sys.exit(2)
     print(json.dumps(result, ensure_ascii=False, indent=1) if args.format == "json" else as_text(result))

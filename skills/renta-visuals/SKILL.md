@@ -1,11 +1,11 @@
 ---
 name: renta-visuals
-description: Turns Renta query results into charts, KPI dashboards and diagrams for an iGaming operator — daily trends, provider comparisons, cohort funnels, region splits, top-N bars, department dashboards, data-flow and model diagrams (Mermaid). Use whenever the user asks for a chart, graph, dashboard, visual report, "графік", "діаграма", "дашборд", "візуалізуй", "покажи динаміку", "gráfico", or when an answer has a time series or more than ~6 comparable numbers that read better as a picture. Works with renta-querying for the data.
+description: Turns Renta query results into charts, KPI dashboards and diagrams for an iGaming operator — daily trends, provider comparisons, cohort funnels, region splits, top-N bars, department dashboards, data-flow and model diagrams (Mermaid). Use whenever the user asks for a chart, graph, dashboard, visual report, "графік", "діаграма", "дашборд", "візуалізуй", "покажи динаміку", "gráfico", or when an answer has a time series or more than ~6 comparable numbers that read better as a picture. Rules for querying: references/rules.md at the plugin root.
 ---
 
 # Visuals for Renta data
 
-Data first: get numbers with renta-querying (exact model, period, filters). Charts never show numbers you didn't query.
+Data first: get numbers by the plugin's rules (`../../references/rules.md`): exact model, period, filters. Charts never show numbers you didn't query.
 
 ## Pick the form
 
@@ -40,7 +40,7 @@ Where it goes:
 
 For any model and metric. The command is [commands/renta-dashboard.md](../../commands/renta-dashboard.md); this is the algorithm.
 
-1. **Find it.** `list_models`, then `describe_model`: the model, the time dimension and the measures. A metric from igaming-metrics/references/metrics.md uses its formula; unapproved ones are labelled "candidate" with components.
+1. **Find it.** `list_models`, then `describe_model`: the model, the time dimension and the measures. A metric's formula comes from the model's Renta description; status (standard, candidate, not defined) from [references/metrics_registry.json](references/metrics_registry.json). Unapproved ones are labelled "candidate" with components.
 2. **Check the limits** in [references/model_limits.md](references/model_limits.md) (and the pack's `../../private/model_limits.md` if it exists) before any query: window, cumulative/state columns, units, row limit, PII. Trim or refuse, and say so in `notes`. Never invent a period the model doesn't have.
 3. **Query** read-only: a daily series (weekly if the period is over ~120 days) plus the comparable previous period; a breakdown as a separate top-N query. Divide ratios yourself.
 4. **Build.** Write the report JSON and run `python3 -I scripts/build_report.py report.json reports/<YYYY-MM-DD>-<slug>.html`. The script checks that every series matches its labels. Without Python, copy the template and replace `REPORT` by hand.
@@ -52,7 +52,7 @@ Ambiguous metric (e.g. "activity")? Take the most likely reading, state it, cont
 
 - Title says what and when. The subtitle carries period (UTC), model, currency. Units are in the chart title.
 - Preliminary days (today, the last 1–2 days) go in `notes`; on line charts add "(prelim.)" to that label.
-- Candidate or ✎ metrics are labelled in the title: "GGR (candidate)".
+- Candidate or not-defined metrics are labelled in the title: "GGR (candidate)".
 - Bars start at zero. Don't connect missing days. Sort categories by value unless the order is natural (dates, funnel stages).
 - Never mix currencies in one series. Per-currency data → one chart per currency, or USD only.
 - Very different magnitudes (e.g. deposits vs GGR) → two line charts, not one. Negative parts (bonus GGR) → separate bars, not a stacked bar.

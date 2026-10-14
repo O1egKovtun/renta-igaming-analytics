@@ -5,7 +5,7 @@ argument-hint: [path to golden.json]
 
 Run the data regression check: $ARGUMENTS
 
-Read-only. Use renta-querying.
+Read-only. Follow `${CLAUDE_PLUGIN_ROOT}/references/rules.md`.
 
 1. **Golden file.** Use the given path; otherwise the first that exists: `private/golden.json` (the unpublished pack), `./renta-golden.json`. If none exists, say so, show the format below, and stop. Do not invent reference numbers.
    Format: `{"cases": [{"id", "label", "expected", "tolerance_pct", "date", "window_days", "query": {"model_id", "measures", "dimensions", "filters", "note"}}]}`. `expected` is a number the team has verified; `date` + `window_days` let the check skip a case whose date has left the model's rolling window.

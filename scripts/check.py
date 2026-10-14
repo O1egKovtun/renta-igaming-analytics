@@ -7,7 +7,7 @@ golden : {"cases": [{"id", "label", "expected": number, "tolerance_pct": number,
                      "date": "YYYY-MM-DD", "window_days": <days>}]}   (date + window_days are optional)
 results: {"<case id>": number | null}
 Statuses: ok, drift (outside tolerance), missing (no result), expired (the case date left the model window).
-Exit code 1 when any case drifts or is missing. Self-check: check.py selftest
+Exit code 1 when any case drifts or is missing; 2 for malformed input. Self-check: check.py selftest
 """
 import argparse
 import json
@@ -29,7 +29,7 @@ def evaluate(golden, results, today):
             continue
         expected = case["expected"]
         gap = (actual - expected) / expected * 100 if expected else (0.0 if actual == 0 else float("inf"))
-        within = abs(gap) <= case.get("tolerance_pct", 0)
+        within = abs(gap) <= case.get("tolerance_pct", 0) + 1e-9  # float noise, not drift
         rows.append({**row, "actual": actual, "gap_pct": round(gap, 3), "tolerance_pct": case.get("tolerance_pct", 0),
                      "status": "ok" if within else "drift"})
     return rows
@@ -60,7 +60,11 @@ if __name__ == "__main__":
     parser.add_argument("results")
     parser.add_argument("--today", default=date.today().isoformat())
     args = parser.parse_args()
-    outcome = evaluate(json.loads(Path(args.golden).read_text(encoding="utf-8")),
-                       json.loads(Path(args.results).read_text(encoding="utf-8")), date.fromisoformat(args.today))
+    try:
+        outcome = evaluate(json.loads(Path(args.golden).read_text(encoding="utf-8")),
+                           json.loads(Path(args.results).read_text(encoding="utf-8")), date.fromisoformat(args.today))
+    except (ValueError, KeyError, TypeError, OSError) as error:
+        print(f"error: {error!r}", file=sys.stderr)  # exit 1 stays reserved for drift or missing
+        sys.exit(2)
     print(as_text(outcome))
     sys.exit(1 if any(r["status"] in ("drift", "missing") for r in outcome) else 0)

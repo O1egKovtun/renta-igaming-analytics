@@ -20,10 +20,10 @@ ALERT_LEVELS = {"info", "warn", "bad"}
 
 def load_statuses():
     """Metric key -> status: registry defaults, then the optional override file named by RENTA_METRICS_STATUS."""
-    statuses = {}
-    if REGISTRY.is_file():
-        registry = json.loads(REGISTRY.read_text(encoding="utf-8"))["metrics"]
-        statuses = {key: value["status"] for key, value in registry.items()}
+    if not REGISTRY.is_file():
+        raise ValueError(f"metrics registry not found: {REGISTRY}")
+    registry = json.loads(REGISTRY.read_text(encoding="utf-8"))["metrics"]
+    statuses = {key: value["status"] for key, value in registry.items()}
     override = os.environ.get("RENTA_METRICS_STATUS")
     if override and Path(override).is_file():
         statuses.update(json.loads(Path(override).read_text(encoding="utf-8")))
@@ -33,8 +33,6 @@ def load_statuses():
 def apply_statuses(report):
     """Items with a "metric" key get their status from the registry (typos fail loudly)."""
     statuses = load_statuses()
-    if not statuses:
-        return report
     for item in report["kpis"] + report["charts"]:
         key = item.get("metric")
         if key is None:
@@ -64,7 +62,10 @@ def render(report):
     validate(report)
     apply_statuses(report)
     html = TEMPLATE.read_text(encoding="utf-8")
-    block = "const REPORT = " + json.dumps(report, ensure_ascii=False, indent=1) + ";"
+    # "<" and the JS line separators are escaped so no text can close the script block or break the string
+    data = json.dumps(report, ensure_ascii=False, indent=1, allow_nan=False)
+    data = data.replace("<", "\\u003c").replace("\u2028", "\\u2028").replace("\u2029", "\\u2029")
+    block = "const REPORT = " + data + ";"
     # function replacement, so backslashes in the data are not read as escapes
     out, count = re.subn(r"const REPORT = \{.*?\n\};", lambda _: block, html, count=1, flags=re.S)
     if count != 1:
@@ -98,7 +99,12 @@ if __name__ == "__main__":
         demo()
         print("self-check ok")
     elif len(sys.argv) == 3:
-        Path(sys.argv[2]).write_text(render(json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))), encoding="utf-8")
+        try:
+            html = render(json.loads(Path(sys.argv[1]).read_text(encoding="utf-8")))
+        except (ValueError, KeyError, TypeError, OSError) as error:
+            print(f"error: {error!r}", file=sys.stderr)
+            sys.exit(2)
+        Path(sys.argv[2]).write_text(html, encoding="utf-8")
         print(sys.argv[2])
     else:
         sys.exit(__doc__)

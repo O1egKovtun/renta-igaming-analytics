@@ -57,7 +57,10 @@ def ratio(rows):
 
 
 def run(payload):
-    body = ratio(payload["rows"]) if payload.get("kind") == "ratio" else additive(payload["rows"])
+    kind = payload.get("kind", "additive")
+    if kind not in ("additive", "ratio"):
+        raise ValueError(f"unknown kind: {kind}")
+    body = ratio(payload["rows"]) if kind == "ratio" else additive(payload["rows"])
     return {k: payload.get(k) for k in ("metric", "unit", "dimension", "a_label", "b_label")} | body
 
 
@@ -96,5 +99,9 @@ if __name__ == "__main__":
     parser.add_argument("input")
     parser.add_argument("--format", choices=["text", "json"], default="text")
     args = parser.parse_args()
-    result = run(json.loads(Path(args.input).read_text(encoding="utf-8")))
+    try:
+        result = run(json.loads(Path(args.input).read_text(encoding="utf-8")))
+    except (ValueError, KeyError, TypeError, OSError) as error:
+        print(f"error: {error!r}", file=sys.stderr)
+        sys.exit(2)
     print(json.dumps(result, ensure_ascii=False, indent=1) if args.format == "json" else as_text(result))
