@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="uk">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -7,30 +7,44 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <style>
   :root { --bg:#f7f7f5; --card:#fff; --text:#1d1d1b; --muted:#6b6b66; --line:#e4e4df;
-          --up:#1a7f4b; --down:#b3261e; --s1:#2f6fde; --s2:#e07b39; --s3:#3aa17e; --s4:#9b59b6; --s5:#c9a227; --s6:#5f6b7a; }
+          --up:#1a7f4b; --down:#b3261e; --warn:#b26a00; --s1:#2f6fde; --s2:#e07b39; --s3:#3aa17e; --s4:#9b59b6; --s5:#c9a227; --s6:#5f6b7a; }
   @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
     --bg:#151514; --card:#1f1f1d; --text:#ececea; --muted:#a3a39e; --line:#33332f;
-    --up:#4cc38a; --down:#f27166; --s1:#6b9cf0; --s2:#f0a06b; --s3:#5cc39d; --s4:#b98ad0; --s5:#e0c25a; --s6:#9aa6b4; } }
+    --up:#4cc38a; --down:#f27166; --warn:#e6a23c; --s1:#6b9cf0; --s2:#f0a06b; --s3:#5cc39d; --s4:#b98ad0; --s5:#e0c25a; --s6:#9aa6b4; } }
   :root[data-theme="dark"] { --bg:#151514; --card:#1f1f1d; --text:#ececea; --muted:#a3a39e; --line:#33332f;
-    --up:#4cc38a; --down:#f27166; --s1:#6b9cf0; --s2:#f0a06b; --s3:#5cc39d; --s4:#b98ad0; --s5:#e0c25a; --s6:#9aa6b4; }
+    --up:#4cc38a; --down:#f27166; --warn:#e6a23c; --s1:#6b9cf0; --s2:#f0a06b; --s3:#5cc39d; --s4:#b98ad0; --s5:#e0c25a; --s6:#9aa6b4; }
   * { box-sizing: border-box; }
   body { margin:0; background:var(--bg); color:var(--text); font:15px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif; }
   main { max-width:1100px; margin:0 auto; padding:24px 16px 48px; }
+  header { display:flex; justify-content:space-between; gap:12px; align-items:flex-start; }
   h1 { font-size:22px; margin:0 0 4px; } .sub { color:var(--muted); margin:0 0 20px; }
+  button { font:inherit; color:var(--text); background:var(--card); border:1px solid var(--line); border-radius:8px; padding:4px 10px; cursor:pointer; }
+  .tools { display:flex; gap:6px; } .tabs { display:flex; gap:6px; margin:0 0 12px; flex-wrap:wrap; }
+  .tabs button[aria-selected="true"] { border-color:var(--s1); color:var(--s1); font-weight:600; }
+  .alerts { list-style:none; padding:0; margin:0 0 16px; display:grid; gap:6px; }
+  .alerts li { background:var(--card); border:1px solid var(--line); border-left:4px solid var(--muted); border-radius:8px; padding:8px 12px; }
+  .alerts li.warn { border-left-color:var(--warn); } .alerts li.bad { border-left-color:var(--down); }
   .kpis { display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:12px; margin-bottom:16px; }
   .card { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:14px 16px; }
   .kpi .label { color:var(--muted); font-size:13px; } .kpi .value { font-size:24px; font-weight:600; margin:2px 0; font-variant-numeric:tabular-nums; }
+  .badge { display:inline-block; font-size:11px; border:1px solid var(--warn); color:var(--warn); border-radius:999px; padding:0 6px; margin-left:6px; vertical-align:middle; }
   .delta.up { color:var(--up); } .delta.down { color:var(--down); } .delta { font-size:13px; }
   .charts { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,480px),1fr)); gap:12px; }
   .chart h2 { font-size:15px; margin:0 0 8px; } .chart .wrap { position:relative; height:280px; }
   .notes { margin-top:16px; color:var(--muted); font-size:13px; } .notes li { margin:2px 0; }
+  [hidden] { display:none !important; }
+  @media print { .tools, .tabs { display:none; } .chart[hidden] { display:block !important; } body { background:#fff; } }
 </style>
 </head>
 <body>
 <main>
-  <h1 id="title"></h1>
-  <p class="sub" id="subtitle"></p>
+  <header>
+    <div><h1 id="title"></h1><p class="sub" id="subtitle"></p></div>
+    <div class="tools"><button id="print" type="button"></button></div>
+  </header>
+  <ul class="alerts" id="alerts"></ul>
   <section class="kpis" id="kpis"></section>
+  <nav class="tabs" id="tabs" role="tablist"></nav>
   <section class="charts" id="charts"></section>
   <ul class="notes" id="notes"></ul>
 </main>
@@ -39,39 +53,46 @@
 const REPORT = {
   title: "Report title",
   subtitle: "Period (UTC) · model · currency",
-  kpis: [ { label: "Example KPI", value: 0, unit: "USD", delta_pct: null, note: "" } ],
-  charts: [ { type: "line", title: "Example chart", unit: "USD", labels: ["d1","d2"],
-              series: [ { name: "series", data: [0, 0] } ], stacked: false, horizontal: false } ],
+  kpis: [ { label: "Example KPI", value: 0, unit: "USD", delta_pct: null, note: "", hint: "", status: "" } ],
+  charts: [ { type: "line", title: "Example chart", unit: "USD", labels: ["d1","d2"], tab: "",
+              series: [ { name: "series", data: [0, 0] } ], stacked: false, horizontal: false, status: "" } ],
+  alerts: [],
+  labels: {},
   notes: [ "Source and caveats" ]
 };
 // ===================================================
+const L = Object.assign({ candidate: "candidate", not_defined: "not approved", print: "Print / PDF", all: "All" }, REPORT.labels || {});
 const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
 const palette = ["--s1","--s2","--s3","--s4","--s5","--s6"].map(css);
 const fmt = (v, unit) => v == null ? "—" :
   (unit === "%" ? v.toLocaleString(undefined,{maximumFractionDigits:1}) + "%" :
    v.toLocaleString(undefined,{maximumFractionDigits: Math.abs(v) < 100 ? 2 : 0}) + (unit ? " " + unit : ""));
+const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
+const badge = s => (s === "candidate" || s === "not_defined") ? el("span", "badge", L[s]) : null;
+document.title = REPORT.title;
 document.getElementById("title").textContent = REPORT.title;
 document.getElementById("subtitle").textContent = REPORT.subtitle;
-const kpis = document.getElementById("kpis");
+document.getElementById("print").textContent = L.print;
+document.getElementById("print").onclick = () => window.print();
+for (const a of REPORT.alerts || []) document.getElementById("alerts").appendChild(el("li", a.level || "", a.text));
 for (const k of REPORT.kpis) {
-  const el = document.createElement("div"); el.className = "card kpi";
-  const d = k.delta_pct;
-  el.innerHTML = `<div class="label"></div><div class="value"></div>` +
-    (d == null ? "" : `<div class="delta ${d >= 0 ? "up" : "down"}">${d >= 0 ? "▲" : "▼"} ${Math.abs(d).toFixed(1)}%</div>`) +
-    (k.note ? `<div class="label note"></div>` : "");
-  el.querySelector(".label").textContent = k.label;
-  el.querySelector(".value").textContent = fmt(k.value, k.unit);
-  if (k.note) el.querySelector(".note").textContent = k.note;
-  kpis.appendChild(el);
+  const card = el("div", "card kpi"); const d = k.delta_pct;
+  const label = el("div", "label", k.label); const b = badge(k.status); if (b) label.appendChild(b);
+  if (k.hint) card.title = k.hint;
+  card.append(label, el("div", "value", fmt(k.value, k.unit)));
+  if (d != null) card.appendChild(el("div", "delta " + (d >= 0 ? "up" : "down"), `${d >= 0 ? "▲" : "▼"} ${Math.abs(d).toFixed(1)}%`));
+  if (k.note) card.appendChild(el("div", "label", k.note));
+  document.getElementById("kpis").appendChild(card);
 }
 const grid = css("--line"), text = css("--muted");
+const cards = [];
 for (const c of REPORT.charts) {
-  const card = document.createElement("div"); card.className = "card chart";
-  card.innerHTML = `<h2></h2><div class="wrap"><canvas></canvas></div>`;
-  card.querySelector("h2").textContent = c.title + (c.unit ? ` (${c.unit})` : "");
-  document.getElementById("charts").appendChild(card);
+  const card = el("div", "card chart"); card.dataset.tab = c.tab || "";
+  const h = el("h2", "", c.title + (c.unit ? ` (${c.unit})` : "")); const b = badge(c.status); if (b) h.appendChild(b);
+  const wrap = el("div", "wrap"); const canvas = document.createElement("canvas"); wrap.appendChild(canvas);
+  card.append(h, wrap); document.getElementById("charts").appendChild(card); cards.push(card);
   const isPie = c.type === "doughnut" || c.type === "pie";
-  new Chart(card.querySelector("canvas"), {
+  new Chart(canvas, {
     type: c.type,
     data: { labels: c.labels, datasets: c.series.map((s, i) => ({
       label: s.name, data: s.data,
@@ -86,7 +107,18 @@ for (const c of REPORT.charts) {
         y: { stacked: !!c.stacked, beginAtZero: c.type === "bar" && !c.horizontal, ticks: { color: text }, grid: { color: grid } } } }
   });
 }
-for (const n of REPORT.notes) { const li = document.createElement("li"); li.textContent = n; document.getElementById("notes").appendChild(li); }
+const tabNames = [...new Set(REPORT.charts.map(c => c.tab).filter(Boolean))];
+if (tabNames.length) {
+  const nav = document.getElementById("tabs");
+  const show = name => { for (const b of nav.children) b.setAttribute("aria-selected", String(b.dataset.tab === name));
+    for (const c of cards) c.hidden = !!name && c.dataset.tab !== name; };
+  for (const name of ["", ...tabNames]) {
+    const b = el("button", "", name || L.all); b.type = "button"; b.dataset.tab = name; b.setAttribute("role", "tab");
+    b.onclick = () => show(name); nav.appendChild(b);
+  }
+  show("");
+}
+for (const n of REPORT.notes) document.getElementById("notes").appendChild(el("li", "", n));
 </script>
 </body>
 </html>

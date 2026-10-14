@@ -2,11 +2,11 @@
 
 🇺🇦 Українська версія: [README.uk.md](README.uk.md)
 
-**Version:** 0.3.0 · **Content:** instructions and metric rules only. No company data (no figures, ids, provider or partner names, model schemas).
+**Version:** 0.4.0 · **Content:** instructions and metric rules only. No company data (no figures, ids, provider or partner names, model schemas).
 
 ## What it is
 
-A Claude plugin: 9 skills and one command that teach Claude to query an iGaming data warehouse through the **Renta Context Layer** (MCP) correctly and consistently: which tools to call in which order, how to avoid common data traps, how to calculate standard metrics, how to draw dashboards, and what Claude must never do.
+A Claude plugin: 8 skills and 5 commands that teach Claude to query an iGaming data warehouse through the **Renta Context Layer** (MCP) correctly and consistently: which tools to call in which order, how to avoid common data traps, how to calculate standard metrics, how to draw dashboards, and what Claude must never do.
 
 ```mermaid
 flowchart LR
@@ -29,7 +29,17 @@ flowchart LR
 | `renta-visuals` | Chart selection, dashboard template, `build_report.py`, Mermaid diagrams, on-demand dashboard algorithm |
 | `renta-model-builder` | Designs model SQL, measures plan and descriptions (dbt `schema.yml` / Renta Metadata) |
 
-Command: `/renta-igaming-analytics:renta-dashboard <metric> [period] [breakdown]` builds an HTML dashboard for any model and metric. It checks the model window, cumulative columns, units, row limits and PII first, and labels unapproved formulas "candidate".
+Commands (`/renta-igaming-analytics:<name>`):
+
+| Command | What it does |
+|---|---|
+| `renta-brief [date] [region]` | Daily briefing: the last full day vs the same weekday last week, anomalies (`scripts/anomalies.py`, robust z-score) and stale models, as a dashboard |
+| `renta-why <metric> [date] [by dimension]` | Splits a change across a dimension (`scripts/why.py`); ratios are split into rate and mix effects |
+| `renta-dashboard <metric> [period] [breakdown]` | HTML dashboard for any model and metric; checks window, cumulative columns, units, row limits and PII first |
+| `renta-check [golden.json]` | Re-runs reference queries and reports drift (`scripts/check.py`), to catch silent changes in models |
+| `renta-start` | Short menu with example requests |
+
+Dashboards support tabs (`tab` on a chart), alert lines (`alerts`), status badges taken from `references/metrics_registry.json` (`metric` key; unapproved metrics get a "candidate" or "not approved" badge), print to PDF and localized labels (`labels`). A local override file named by `RENTA_METRICS_STATUS` (`{"ggr": "approved"}`) changes a status in one place.
 
 ## Rules baked into the skills
 
@@ -62,3 +72,4 @@ Run `./leak_check.sh`. It scans the public tree for terms listed in `private/lea
 | A Renta model changed | `private/models.md` and `private/golden_queries/` |
 | A new generic data trap | `skills/renta-querying/references/pitfalls.md` |
 | Any skill change | test it, then `./build.sh` |
+| Any script or template change | `python3 tests/test_scripts.py`, then `./leak_check.sh` |

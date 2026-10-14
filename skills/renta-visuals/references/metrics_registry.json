@@ -1,0 +1,32 @@
+{
+  "_note": "Default status of each metric when no local override exists. standard = widely agreed definition; candidate = may be computed but must be labelled; not_defined = show components, never a total. Local overrides: a JSON file {metric: status} named by the RENTA_METRICS_STATUS env var (status may be 'approved').",
+  "metrics": {
+    "deposits": {"name": "Deposits", "status": "standard"},
+    "withdrawals": {"name": "Withdrawals", "status": "standard"},
+    "net_deposit": {"name": "Net deposit", "status": "standard"},
+    "avg_deposit": {"name": "Average deposit", "status": "standard"},
+    "new_players": {"name": "New players", "status": "standard"},
+    "ftd": {"name": "FTD", "status": "standard"},
+    "depositors": {"name": "Depositors", "status": "standard"},
+    "reg_to_ftd": {"name": "Registration to FTD conversion", "status": "standard"},
+    "players_with_activity": {"name": "Players with activity", "status": "standard"},
+    "active_players": {"name": "Active players", "status": "not_defined"},
+    "ggr": {"name": "GGR", "status": "candidate"},
+    "hold": {"name": "Hold / margin", "status": "candidate"},
+    "rtp": {"name": "RTP", "status": "standard"},
+    "ngr": {"name": "NGR", "status": "not_defined"},
+    "arpu": {"name": "ARPU", "status": "not_defined"},
+    "arppu": {"name": "ARPPU", "status": "not_defined"},
+    "success_rate": {"name": "Payment success rate", "status": "standard"},
+    "processing_time": {"name": "Processing time", "status": "standard"},
+    "marketing_cost": {"name": "Marketing cost by type", "status": "standard"},
+    "total_marketing_cost": {"name": "Total marketing cost", "status": "not_defined"},
+    "cpa": {"name": "CPA", "status": "not_defined"},
+    "romi": {"name": "ROMI", "status": "not_defined"},
+    "retention": {"name": "Retention", "status": "not_defined"},
+    "churn": {"name": "Churn", "status": "not_defined"},
+    "vip_distribution": {"name": "VIP distribution", "status": "standard"},
+    "flagged_ftd_share": {"name": "Share of FTD with a multiaccount signal", "status": "standard"},
+    "bonus_abuse": {"name": "Bonus abuse", "status": "not_defined"}
+  }
+}

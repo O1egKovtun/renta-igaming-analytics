@@ -26,8 +26,11 @@ Data first: get numbers with renta-querying (exact model, period, filters). Char
 { title, subtitle: "<period> (UTC) · <model> · <currency>",
   kpis: [{label, value, unit, delta_pct, note}],
   charts: [{type: "line"|"bar"|"doughnut", title, unit, labels: [...], series: [{name, data: [...]}], stacked, horizontal}],
+  alerts: [{level: "info"|"warn"|"bad", text}],   // optional lines above the tiles (anomalies, stale data)
+  labels: {candidate, not_defined, print, all},    // optional: fixed labels in the user's language
   notes: ["source, preliminary days, candidate formulas"] }
 ```
+Optional per item: `metric` (a key of [references/metrics_registry.json](references/metrics_registry.json); `build_report.py` then sets the status badge "candidate" / "not approved" itself and rejects unknown keys), `hint` (tooltip on a tile), `tab` (groups charts into tabs). The page also has a print / PDF button. Local status overrides: a JSON file `{metric: status}` named by the `RENTA_METRICS_STATUS` env var.
 Where it goes:
 - **claude.ai / Desktop:** publish it as an HTML artifact.
 - **Claude Code:** write `reports/<YYYY-MM-DD>-<slug>.html` in the current project and give the path.
